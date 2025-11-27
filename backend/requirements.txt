@@ -5,3 +5,6 @@ google-auth
 google-auth-oauthlib
 google-api-python-client
 python-multipartsource venv/bin/activate
+
+requests
+python-multipart
