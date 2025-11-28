@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 import uvicorn
 
 from backend_code import (
@@ -22,9 +21,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
-def home():
-    return FileResponse("index.html")
+# REMOVE HOME ROUTE — backend should not return index.html
+# Frontend is served from Vercel, not backend
 
 @app.get("/search")
 def search(query: str):
