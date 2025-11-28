@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
+from auth import login, oauth_callback, get_credentials
 from backend_code import (
     search_videos,
     get_liked_videos,
@@ -21,8 +22,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# REMOVE HOME ROUTE — backend should not return index.html
-# Frontend is served from Vercel, not backend
+# ---------------- AUTH ROUTES ----------------
+
+@app.get("/login")
+def login_route():
+    return login()
+
+@app.get("/oauth2callback")
+async def oauth_callback_route(request: Request):
+    return await oauth_callback(request)
+
+# ---------------- API ROUTES -----------------
 
 @app.get("/search")
 def search(query: str):
@@ -47,6 +57,7 @@ def comment(videoUrl: str, text: str):
 @app.get("/subscribe")
 def subscribe(videoUrl: str):
     return subscribe_channel(videoUrl)
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
