@@ -1,4 +1,4 @@
-MCP YouTube Agent - Complete Documentation
+# 📘 MCP YouTube Agent - Complete Documentation
 
 A fully functional AI-powered YouTube Agent built using the Model Context Protocol (MCP). This agent interacts directly with the YouTube Data API to perform various YouTube actions through an intelligent interface.
 
