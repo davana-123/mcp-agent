@@ -1,8 +1,9 @@
+# server.py
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
-from auth import login, oauth_callback, get_credentials
+from auth import login, oauth_callback
 from backend_code import (
     search_videos,
     get_liked_videos,
@@ -14,6 +15,7 @@ from backend_code import (
 
 app = FastAPI()
 
+# Allow Vercel frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,8 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ---------------- AUTH ROUTES ----------------
-
+# ---------- AUTH ROUTES ----------
 @app.get("/login")
 def login_route():
     return login()
@@ -32,8 +33,8 @@ def login_route():
 async def oauth_callback_route(request: Request):
     return await oauth_callback(request)
 
-# ---------------- API ROUTES -----------------
 
+# ---------- API ROUTES ----------
 @app.get("/search")
 def search(query: str):
     return search_videos(query)
