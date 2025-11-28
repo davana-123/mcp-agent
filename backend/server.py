@@ -1,7 +1,9 @@
 # server.py
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import uvicorn
+
 from auth import login, oauth_callback
 from backend_code import (
     search_videos,
@@ -14,64 +16,83 @@ from backend_code import (
 
 app = FastAPI(title="YouTube MCP Agent Backend")
 
-# ------------ CORS (REQUIRED FOR VERCEL + RENDER) ------------
+# -------------------------------------------------------
+# CORS CONFIG
+# -------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://mcp-agent-gamma.vercel.app",
-        "https://mcp-agent-13y5wia0i-davana-s-projects.vercel.app",
-        "*"  # temporary until testing is complete
-    ],
+    allow_origins=["*"],     # Allow Vercel frontend
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ------------ AUTH ROUTES ------------
+# -------------------------------------------------------
+# Pydantic Request Models
+# -------------------------------------------------------
+class LikeRequest(BaseModel):
+    videoId: str
+
+class CommentRequest(BaseModel):
+    videoId: str
+    text: str
+
+class SubscribeRequest(BaseModel):
+    videoId: str   # We extract channelId internally
+
+
+# -------------------------------------------------------
+# AUTH ROUTES
+# -------------------------------------------------------
 @app.get("/auth/login")
 def auth_login():
-    """
-    Redirects user to Google OAuth screen.
-    """
     return login()
 
 @app.get("/auth/callback")
-async def auth_callback(request: Request):
-    """
-    Handles the OAuth callback from Google.
-    """
+async def auth_callback(request):
     return await oauth_callback(request)
 
 
-# ------------ YOUTUBE API ROUTES (MCP Tools) ------------
-
+# -------------------------------------------------------
+# YOUTUBE READ ROUTES
+# -------------------------------------------------------
 @app.get("/api/search")
 def api_search(query: str):
     if not query:
         raise HTTPException(status_code=400, detail="Query is required")
     return search_videos(query)
 
+
 @app.get("/api/liked")
 def api_liked():
     return get_liked_videos()
+
 
 @app.get("/api/recommend")
 def api_recommend():
     return get_recommended_videos()
 
+
+# -------------------------------------------------------
+# YOUTUBE WRITE ROUTES (POST)
+# -------------------------------------------------------
 @app.post("/api/like")
-def api_like(videoId: str):
-    return like_video(videoId)
+def api_like(req: LikeRequest):
+    return like_video(req.videoId)
+
 
 @app.post("/api/comment")
-def api_comment(videoId: str, text: str):
-    return comment_on_video(videoId, text)
+def api_comment(req: CommentRequest):
+    return comment_on_video(req.videoId, req.text)
+
 
 @app.post("/api/subscribe")
-def api_subscribe(channelId: str):
-    return subscribe_channel(channelId)
+def api_subscribe(req: SubscribeRequest):
+    return subscribe_channel(req.videoId)
 
 
-# ------------ RUN LOCALLY ------------
+# -------------------------------------------------------
+# LOCAL DEV
+# -------------------------------------------------------
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

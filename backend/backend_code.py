@@ -6,21 +6,22 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from auth import get_credentials
 
-# -------------------------------------------------------
-# Cached YouTube client (improves performance)
-# -------------------------------------------------------
-_youtube_client = None
-
-def _get_youtube_client():
-    global _youtube_client
-    if _youtube_client is None:
-        creds = get_credentials()
-        _youtube_client = build("youtube", "v3", credentials=creds, cache_discovery=False)
-    return _youtube_client
-
 
 # -------------------------------------------------------
-# VIDEO ID extraction (kept for compatibility)
+# ALWAYS recreate the YouTube client for WRITE operations
+# -------------------------------------------------------
+def _youtube():
+    creds = get_credentials()
+    return build(
+        "youtube",
+        "v3",
+        credentials=creds,
+        cache_discovery=False
+    )
+
+
+# -------------------------------------------------------
+# Extract 11-digit YouTube video ID
 # -------------------------------------------------------
 def extract_video_id(url: str) -> Optional[str]:
     if not isinstance(url, str):
@@ -36,24 +37,26 @@ def extract_video_id(url: str) -> Optional[str]:
         if m:
             return m.group(1)
 
+    # Already a valid videoId? Allow it.
+    if len(url) == 11:
+        return url
+
     return None
 
 
-
 # -------------------------------------------------------
-# Fetch channel ID for subscriptions
+# Fetch channelId from a video
 # -------------------------------------------------------
 def extract_channel_id_from_video(video_id: str) -> Optional[str]:
     try:
-        yt = _get_youtube_client()
+        yt = _youtube()
         resp = yt.videos().list(part="snippet", id=video_id).execute()
         items = resp.get("items", [])
         if not items:
             return None
-        return items[0]["snippet"].get("channelId")
+        return items[0]["snippet"]["channelId"]
     except Exception:
         return None
-
 
 
 # -------------------------------------------------------
@@ -61,8 +64,7 @@ def extract_channel_id_from_video(video_id: str) -> Optional[str]:
 # -------------------------------------------------------
 def search_videos(query: str, max_results: int = 6) -> List[Dict[str, str]]:
     try:
-        yt = _get_youtube_client()
-
+        yt = _youtube()
         resp = yt.search().list(
             part="snippet",
             q=query,
@@ -84,78 +86,67 @@ def search_videos(query: str, max_results: int = 6) -> List[Dict[str, str]]:
         return results
 
     except HttpError as e:
-        return [{"error": f"Search failed: {e}"}]
+        return [{"error": f"YouTube API error: {e.error_details}"}]
     except Exception as e:
         return [{"error": f"Unexpected error: {str(e)}"}]
-
 
 
 # -------------------------------------------------------
 # LIKE video
 # -------------------------------------------------------
 def like_video(video_id: str) -> Dict[str, str]:
-    if not video_id:
-        return {"error": "Missing videoId"}
-
     try:
-        yt = _get_youtube_client()
+        yt = _youtube()
         yt.videos().rate(id=video_id, rating="like").execute()
-        return {"message": "Video liked successfully"}
+        return {"message": "👍 Video liked successfully"}
 
     except HttpError as e:
-        return {"error": f"YouTube API error: {e}"}
+        return {"error": f"YouTube error: {e.error_details}"}
     except Exception as e:
-        return {"error": f"Unexpected error: {str(e)}"}
-
+        return {"error": str(e)}
 
 
 # -------------------------------------------------------
 # COMMENT on video
 # -------------------------------------------------------
 def comment_on_video(video_id: str, text: str) -> Dict[str, str]:
-    if not video_id:
-        return {"error": "Missing videoId"}
     if not text:
-        return {"error": "Missing comment text"}
+        return {"error": "Comment text cannot be empty"}
 
     try:
-        yt = _get_youtube_client()
-
+        yt = _youtube()
         yt.commentThreads().insert(
             part="snippet",
             body={
                 "snippet": {
                     "videoId": video_id,
                     "topLevelComment": {
-                        "snippet": {"textOriginal": text}
+                        "snippet": {
+                            "textOriginal": text
+                        }
                     }
                 }
             }
         ).execute()
 
-        return {"message": "Comment posted successfully"}
+        return {"message": "💬 Comment posted successfully"}
 
     except HttpError as e:
-        return {"error": f"YouTube API error: {e}"}
+        return {"error": f"YouTube error: {e.error_details}"}
     except Exception as e:
-        return {"error": f"Unexpected error: {str(e)}"}
-
+        return {"error": str(e)}
 
 
 # -------------------------------------------------------
-# SUBSCRIBE to channel
+# SUBSCRIBE to channel (videoId → channelId)
 # -------------------------------------------------------
 def subscribe_channel(video_id: str) -> Dict[str, str]:
-    if not video_id:
-        return {"error": "Missing videoId"}
-
-    channel_id = extract_channel_id_from_video(video_id)
-    if not channel_id:
-        return {"error": "Unable to fetch channel ID"}
-
     try:
-        yt = _get_youtube_client()
+        channel_id = extract_channel_id_from_video(video_id)
+        if not channel_id:
+            return {"error": "Could not find channel for video"}
 
+        yt = _youtube()
         yt.subscriptions().insert(
             part="snippet",
             body={
@@ -168,13 +159,12 @@ def subscribe_channel(video_id: str) -> Dict[str, str]:
             }
         ).execute()
 
-        return {"message": "Subscribed to channel successfully"}
+        return {"message": "🔔 Subscribed successfully"}
 
     except HttpError as e:
-        return {"error": f"YouTube API error: {e}"}
+        return {"error": f"YouTube error: {e.error_details}"}
     except Exception as e:
-        return {"error": f"Unexpected error: {str(e)}"}
-
+        return {"error": str(e)}
 
 
 # -------------------------------------------------------
@@ -182,49 +172,47 @@ def subscribe_channel(video_id: str) -> Dict[str, str]:
 # -------------------------------------------------------
 def get_liked_videos(max_results: int = 10) -> List[Dict[str, str]]:
     try:
-        yt = _get_youtube_client()
-
+        yt = _youtube()
         resp = yt.videos().list(
             part="snippet",
             myRating="like",
             maxResults=max_results
         ).execute()
 
-        items = []
+        results = []
         for v in resp.get("items", []):
-            items.append({
-                "videoId": v.get("id"),
+            results.append({
+                "videoId": v["id"],
                 "title": v["snippet"]["title"],
                 "channelTitle": v["snippet"]["channelTitle"]
             })
 
-        return items
+        return results
 
     except HttpError as e:
-        return [{"error": f"API error: {e}"}]
+        return [{"error": f"YouTube error: {e.error_details}"}]
     except Exception as e:
-        return [{"error": f"Unexpected error: {str(e)}"}]
-
+        return [{"error": str(e)}]
 
 
 # -------------------------------------------------------
-# GET recommended videos
+# RECOMMEND videos
 # -------------------------------------------------------
 def get_recommended_videos(max_results=10) -> List[Dict[str, str]]:
-    liked_videos = get_liked_videos(10)
+    liked = get_liked_videos(10)
 
-    if not isinstance(liked_videos, list):
+    if not isinstance(liked, list):
         return []
 
     recommended = []
 
-    for item in liked_videos:
+    for item in liked:
         title = item.get("title", "")
         keywords = " ".join(title.split()[:4])
 
-        res = search_videos(keywords, 3)
-        if isinstance(res, list):
-            recommended.extend(res)
+        results = search_videos(keywords, 3)
+        if isinstance(results, list):
+            recommended.extend(results)
 
     # Deduplicate
     unique = {}

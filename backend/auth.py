@@ -8,7 +8,7 @@ from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 
 # -------------------------------------------------------
-# Load OAuth client config from environment (Render ENV)
+# Load OAuth client config from environment
 # -------------------------------------------------------
 CLIENT_SECRET_JSON = os.getenv("GOOGLE_CLIENT_SECRET_JSON")
 
@@ -17,28 +17,31 @@ if not CLIENT_SECRET_JSON:
 
 client_config = json.loads(CLIENT_SECRET_JSON)
 
+# ALWAYS use backend URL for redirect
 REDIRECT_URI = "https://mcp-agent-1.onrender.com/auth/callback"
 
 
 # -------------------------------------------------------
-# Utility: Create OAuth Flow dynamically (IMPORTANT)
+# Create OAuth flow with FULL YouTube scope
 # -------------------------------------------------------
 def create_flow():
     return Flow.from_client_config(
         client_config,
         scopes=[
-            "https://www.googleapis.com/auth/youtube.force-ssl",
-            "https://www.googleapis.com/auth/youtube.readonly"
+            "https://www.googleapis.com/auth/youtube"   # FULL READ/WRITE SCOPE
         ],
         redirect_uri=REDIRECT_URI
     )
 
 
 # -------------------------------------------------------
-# Save & Load creds (local token.pkl only for DEV)
+# Save & Load credentials (local only for DEV)
 # -------------------------------------------------------
 def save_creds(creds):
-    """Save credentials to token.pkl (dev use)"""
+    """
+    Save OAuth credentials to token.pkl.
+    This is used only for local development—not on Render.
+    """
     with open("token.pkl", "wb") as f:
         pickle.dump(creds, f)
 
@@ -48,7 +51,6 @@ def save_creds(creds):
 
 
 def load_saved_creds():
-    """Load saved credentials"""
     if os.path.exists("token.pkl"):
         with open("token.pkl", "rb") as f:
             return pickle.load(f)
@@ -56,12 +58,13 @@ def load_saved_creds():
 
 
 # -------------------------------------------------------
-# Main: Return valid usable credentials
+# Main function to return valid Google OAuth credentials
 # -------------------------------------------------------
 def get_credentials():
-    """Central method to fetch valid credentials"""
-
-    # 1. Production mode: Prefer refresh token stored in ENV
+    """
+    Production: Use refresh token from Render ENV.
+    Local: Use token.pkl.
+    """
     refresh = os.getenv("GOOGLE_REFRESH_TOKEN")
 
     if refresh:
@@ -73,26 +76,33 @@ def get_credentials():
             client_secret=client_config["web"]["client_secret"]
         )
 
-    # 2. Development fallback
     saved = load_saved_creds()
     if saved:
         return saved
 
-    raise Exception("No YouTube OAuth credentials found. Visit /auth/login.")
+    raise Exception("❌ No valid YouTube OAuth credentials. Visit /auth/login.")
 
 
 # -------------------------------------------------------
-# Routes
+# OAuth: Login & Callback Routes
 # -------------------------------------------------------
 def login():
-    """Redirect user to Google OAuth screen."""
+    """
+    Redirect user to Google OAuth screen.
+    """
     flow = create_flow()
-    auth_url, _ = flow.authorization_url(prompt="consent", access_type="offline")
+    auth_url, _ = flow.authorization_url(
+        prompt="consent",
+        access_type="offline",
+        include_granted_scopes="true"
+    )
     return RedirectResponse(auth_url)
 
 
 async def oauth_callback(request: Request):
-    """Handle Google OAuth callback."""
+    """
+    Called after user approves permissions.
+    """
     code = request.query_params.get("code")
 
     flow = create_flow()
@@ -100,7 +110,7 @@ async def oauth_callback(request: Request):
 
     creds = flow.credentials
 
-    # Only the FIRST login generates refresh_token
+    # Only returned during first authorization
     if creds.refresh_token:
         save_creds(creds)
 
@@ -111,5 +121,5 @@ async def oauth_callback(request: Request):
 
     return {
         "message": "OAuth successful BUT refresh token missing.",
-        "reason": "Google didn't issue a new refresh token. Remove saved credentials & retry using ?prompt=consent"
+        "reason": "Google did not provide a new refresh token. Remove stored token and re-auth with ?prompt=consent"
     }
