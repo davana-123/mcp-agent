@@ -94,6 +94,7 @@ body {
 
 .video-card:hover {
   transform: scale(1.03);
+  cursor: pointer;
 }
 
 .thumb {
@@ -140,13 +141,13 @@ body {
 
 <!-- Sidebar -->
 <div class="sidebar">
-  <div class="sidebar-item">🏠 Home</div>
-  <div class="sidebar-item">🔥 Trending</div>
-  <div class="sidebar-item">📺 Subscriptions</div>
+  <div class="sidebar-item" onclick="loadHome()">🏠 Home</div>
+  <div class="sidebar-item" onclick="loadTrending()">🔥 Trending</div>
+  <div class="sidebar-item" onclick="loadSubscriptions()">📺 Subscriptions</div>
   <div style="border-bottom:1px solid #222; margin:12px 0;"></div>
-  <div class="sidebar-item">History</div>
-  <div class="sidebar-item">Watch Later</div>
-  <div class="sidebar-item">Liked Videos</div>
+  <div class="sidebar-item" onclick="loadHistory()">History</div>
+  <div class="sidebar-item" onclick="loadWatchLater()">Watch Later</div>
+  <div class="sidebar-item" onclick="loadLiked()">Liked Videos</div>
 </div>
 
 <!-- Top Navbar -->
@@ -184,47 +185,26 @@ function clearMessages() {
 }
 
 // --------------------------
+// SEARCH ENTER KEY
+// --------------------------
+document.getElementById('input').addEventListener('keypress', function (e) {
+  if (e.key === 'Enter') send();
+});
+
+// --------------------------
 // SEARCH / COMMAND HANDLER
 // --------------------------
 async function send() {
   const input = document.getElementById("input");
   const query = input.value.trim();
   if (!query) return;
-
   input.value = "";
 
-  const cmd = query.toLowerCase();
+  addMessage("🔎 Searching for: " + query);
 
-  try {
-    if (cmd.startsWith("search")) {
-      const q = query.replace(/search/i, "").trim();
-      addMessage("🔎 Searching for: " + q);
-      const res = await fetch(`${API}/search?query=${encodeURIComponent(q)}`);
-      const data = await res.json();
-      showVideos(data);
-      return;
-    }
-
-    if (cmd.includes("liked")) {
-      addMessage("❤️ Loading liked videos...");
-      const res = await fetch(`${API}/liked`);
-      const data = await res.json();
-      showVideos(data);
-      return;
-    }
-
-    if (cmd.includes("recommend")) {
-      addMessage("🎯 Loading recommendations...");
-      const res = await fetch(`${API}/recommend`);
-      const data = await res.json();
-      showVideos(data);
-      return;
-    }
-
-    addMessage("🤖 Commands: search <q>, liked, recommend");
-  } catch (error) {
-    addMessage("⚠️ Error: " + error.message);
-  }
+  const res = await fetch(`${API}/search?query=${encodeURIComponent(query)}`);
+  const data = await res.json();
+  showVideos(data);
 }
 
 // --------------------------
@@ -240,16 +220,21 @@ function showVideos(list) {
     const card = document.createElement("div");
     card.className = "video-card";
 
+    card.onclick = () => {
+      window.open(`https://www.youtube.com/watch?v=${v.videoId}`, "_blank");
+    };
+
     card.innerHTML = `
       <img class="thumb" src="https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg">
       <div class="video-info">
         <h3>${v.title}</h3>
         <small>${v.channelTitle}</small>
       </div>
+
       <div class="button-row">
-        <button onclick="likeVideo('${v.videoId}')">👍 Like</button>
-        <button onclick="commentVideo('${v.videoId}')">💬 Comment</button>
-        <button onclick="subscribeChannel('${v.videoId}')">🔔 Subscribe</button>
+        <button onclick="event.stopPropagation(); likeVideo('${v.videoId}')">👍 Like</button>
+        <button onclick="event.stopPropagation(); commentVideo('${v.videoId}')">💬 Comment</button>
+        <button onclick="event.stopPropagation(); subscribeChannel('${v.videoId}')">🔔 Subscribe</button>
       </div>
     `;
 
@@ -293,6 +278,20 @@ async function subscribeChannel(videoId) {
   });
   const data = await res.json();
   addMessage(data.message || data.error);
+}
+
+// --------------------------
+// SIDEBAR BUTTON HANDLERS
+// --------------------------
+function loadHome() { send(); }
+function loadTrending() { addMessage("🔥 Trending not implemented yet."); }
+function loadSubscriptions() { addMessage("📺 Subscriptions not implemented yet."); }
+function loadHistory() { addMessage("📜 History is not available via YouTube API."); }
+function loadWatchLater() { addMessage("⌛ Watch Later cannot be accessed via API."); }
+function loadLiked() {
+  fetch(`${API}/liked`)
+    .then(res => res.json())
+    .then(data => showVideos(data));
 }
 </script>
 
