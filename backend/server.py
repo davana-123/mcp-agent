@@ -1,8 +1,7 @@
 # server.py
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
-
 from auth import login, oauth_callback
 from backend_code import (
     search_videos,
@@ -13,52 +12,66 @@ from backend_code import (
     subscribe_channel
 )
 
-app = FastAPI()
+app = FastAPI(title="YouTube MCP Agent Backend")
 
-# Allow Vercel frontend
+# ------------ CORS (REQUIRED FOR VERCEL + RENDER) ------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://mcp-agent-gamma.vercel.app",
+        "https://mcp-agent-13y5wia0i-davana-s-projects.vercel.app",
+        "*"  # temporary until testing is complete
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ---------- AUTH ROUTES ----------
-@app.get("/login")
-def login_route():
+# ------------ AUTH ROUTES ------------
+@app.get("/auth/login")
+def auth_login():
+    """
+    Redirects user to Google OAuth screen.
+    """
     return login()
 
-@app.get("/oauth2callback")
-async def oauth_callback_route(request: Request):
+@app.get("/auth/callback")
+async def auth_callback(request: Request):
+    """
+    Handles the OAuth callback from Google.
+    """
     return await oauth_callback(request)
 
 
-# ---------- API ROUTES ----------
-@app.get("/search")
-def search(query: str):
+# ------------ YOUTUBE API ROUTES (MCP Tools) ------------
+
+@app.get("/api/search")
+def api_search(query: str):
+    if not query:
+        raise HTTPException(status_code=400, detail="Query is required")
     return search_videos(query)
 
-@app.get("/liked")
-def liked():
+@app.get("/api/liked")
+def api_liked():
     return get_liked_videos()
 
-@app.get("/recommend")
-def recommend():
+@app.get("/api/recommend")
+def api_recommend():
     return get_recommended_videos()
 
-@app.get("/like")
-def like(videoUrl: str):
-    return like_video(videoUrl)
+@app.post("/api/like")
+def api_like(videoId: str):
+    return like_video(videoId)
 
-@app.get("/comment")
-def comment(videoUrl: str, text: str):
-    return comment_on_video(videoUrl, text)
+@app.post("/api/comment")
+def api_comment(videoId: str, text: str):
+    return comment_on_video(videoId, text)
 
-@app.get("/subscribe")
-def subscribe(videoUrl: str):
-    return subscribe_channel(videoUrl)
+@app.post("/api/subscribe")
+def api_subscribe(channelId: str):
+    return subscribe_channel(channelId)
 
 
+# ------------ RUN LOCALLY ------------
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

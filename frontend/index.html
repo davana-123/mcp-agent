@@ -7,18 +7,17 @@
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 
 <style>
-/* ------------------- GLOBAL ------------------- */
+/* Global styling */
 body {
   margin: 0;
   font-family: "Roboto", sans-serif;
   background: #000;
-  color: white;
+  color: #fff;
   display: flex;
   height: 100vh;
   overflow: hidden;
 }
 
-/* ------------------- SIDEBAR ------------------- */
 .sidebar {
   width: 240px;
   background: #111;
@@ -31,16 +30,12 @@ body {
   padding: 12px 22px;
   font-size: 15px;
   cursor: pointer;
-  display: flex;
-  gap: 12px;
-  align-items: center;
 }
 
 .sidebar-item:hover {
   background: #1f1f1f;
 }
 
-/* ------------------- TOP NAVBAR ------------------- */
 .navbar {
   position: fixed;
   left: 240px;
@@ -62,8 +57,8 @@ body {
 .search-box input {
   width: 100%;
   padding: 10px;
-  background: #000;
   border: 1px solid #333;
+  background: #000;
   color: white;
 }
 
@@ -71,12 +66,10 @@ body {
   padding: 10px 16px;
   background: #2563EB;
   border: none;
-  cursor: pointer;
   color: white;
-  font-size: 14px;
+  cursor: pointer;
 }
 
-/* ------------------- MAIN AREA ------------------- */
 .main {
   margin-left: 240px;
   padding: 20px;
@@ -85,7 +78,6 @@ body {
   overflow-y: auto;
 }
 
-/* ------------------- VIDEO GRID ------------------- */
 .video-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
@@ -97,7 +89,6 @@ body {
   border: 1px solid #333;
   border-radius: 10px;
   overflow: hidden;
-  cursor: pointer;
   transition: 0.2s;
 }
 
@@ -118,14 +109,12 @@ body {
 .video-info h3 {
   margin: 0;
   font-size: 16px;
-  color: #fff;
 }
 
 .video-info small {
   color: #aaa;
 }
 
-/* action buttons */
 .button-row {
   padding: 12px;
   display: flex;
@@ -149,7 +138,7 @@ body {
 </head>
 <body>
 
-<!-- SIDEBAR -->
+<!-- Sidebar -->
 <div class="sidebar">
   <div class="sidebar-item">🏠 Home</div>
   <div class="sidebar-item">🔥 Trending</div>
@@ -160,7 +149,7 @@ body {
   <div class="sidebar-item">Liked Videos</div>
 </div>
 
-<!-- NAVBAR -->
+<!-- Top Navbar -->
 <div class="navbar">
   <div class="search-box">
     <input id="input" placeholder="Search videos...">
@@ -168,35 +157,47 @@ body {
   </div>
 </div>
 
-<!-- MAIN CONTENT -->
+<!-- Main -->
 <div class="main">
   <div id="messages"></div>
 </div>
 
 <script>
-const API = "https://mcp-agent-1.onrender.com";
-;
+// --------------------------
+// CONFIG
+// --------------------------
+const API = "https://mcp-agent-1.onrender.com/api";
 
+// --------------------------
+// Helpers
+// --------------------------
 function addMessage(text) {
   const messages = document.getElementById("messages");
   const p = document.createElement("p");
   p.innerHTML = text;
   p.style.color = "#aaa";
-  p.style.margin = "6px 0";
   messages.appendChild(p);
 }
 
+function clearMessages() {
+  document.getElementById("messages").innerHTML = "";
+}
+
+// --------------------------
+// SEARCH / COMMAND HANDLER
+// --------------------------
 async function send() {
   const input = document.getElementById("input");
-  const text = input.value.trim();
-  if (!text) return;
+  const query = input.value.trim();
+  if (!query) return;
+
   input.value = "";
 
-  const msg = text.toLowerCase();
+  const cmd = query.toLowerCase();
 
   try {
-    if (msg.includes("search")) {
-      const q = text.replace(/search/i, "").trim();
+    if (cmd.startsWith("search")) {
+      const q = query.replace(/search/i, "").trim();
       addMessage("🔎 Searching for: " + q);
       const res = await fetch(`${API}/search?query=${encodeURIComponent(q)}`);
       const data = await res.json();
@@ -204,31 +205,33 @@ async function send() {
       return;
     }
 
-    if (msg.includes("liked")) {
-      addMessage("📌 Fetching liked videos...");
+    if (cmd.includes("liked")) {
+      addMessage("❤️ Loading liked videos...");
       const res = await fetch(`${API}/liked`);
       const data = await res.json();
       showVideos(data);
       return;
     }
 
-    if (msg.includes("recommend")) {
-      addMessage("🎯 Fetching recommendations...");
+    if (cmd.includes("recommend")) {
+      addMessage("🎯 Loading recommendations...");
       const res = await fetch(`${API}/recommend`);
       const data = await res.json();
       showVideos(data);
       return;
     }
 
-    addMessage("🤖 Try: search <query>, liked, recommend");
-  } catch (err) {
-    addMessage("⚠️ Error: " + err.message);
+    addMessage("🤖 Commands: search <q>, liked, recommend");
+  } catch (error) {
+    addMessage("⚠️ Error: " + error.message);
   }
 }
 
+// --------------------------
+// Render videos
+// --------------------------
 function showVideos(list) {
-  const messages = document.getElementById("messages");
-  messages.innerHTML = ""; 
+  clearMessages();
 
   const grid = document.createElement("div");
   grid.className = "video-grid";
@@ -239,43 +242,57 @@ function showVideos(list) {
 
     card.innerHTML = `
       <img class="thumb" src="https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg">
-
       <div class="video-info">
-          <h3>${v.title}</h3>
-          <small>${v.channelTitle}</small>
+        <h3>${v.title}</h3>
+        <small>${v.channelTitle}</small>
       </div>
-
       <div class="button-row">
-          <button onclick="likeVideo('${v.videoId}')">👍 Like</button>
-          <button onclick="commentVideo('${v.videoId}')">💬 Comment</button>
-          <button onclick="subscribeChannel('${v.videoId}')">🔔 Subscribe</button>
+        <button onclick="likeVideo('${v.videoId}')">👍 Like</button>
+        <button onclick="commentVideo('${v.videoId}')">💬 Comment</button>
+        <button onclick="subscribeChannel('${v.videoId}')">🔔 Subscribe</button>
       </div>
     `;
 
     grid.appendChild(card);
   });
 
-  messages.appendChild(grid);
+  document.getElementById("messages").appendChild(grid);
 }
 
+// --------------------------
+// ACTIONS
+// --------------------------
 async function likeVideo(videoId) {
-  const res = await fetch(`${API}/like?videoUrl=https://www.youtube.com/watch?v=${videoId}`);
+  const res = await fetch(`${API}/like`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ videoId })
+  });
   const data = await res.json();
-  addMessage(data.message);
+  addMessage(data.message || data.error);
 }
 
 async function commentVideo(videoId) {
-  const text = prompt("Enter comment:");
+  const text = prompt("Enter your comment:");
   if (!text) return;
-  const res = await fetch(`${API}/comment?videoUrl=https://www.youtube.com/watch?v=${videoId}&text=${text}`);
+
+  const res = await fetch(`${API}/comment`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ videoId, text })
+  });
   const data = await res.json();
-  addMessage(data.message);
+  addMessage(data.message || data.error);
 }
 
 async function subscribeChannel(videoId) {
-  const res = await fetch(`${API}/subscribe?videoUrl=https://www.youtube.com/watch?v=${videoId}`);
+  const res = await fetch(`${API}/subscribe`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ videoId })
+  });
   const data = await res.json();
-  addMessage(data.message);
+  addMessage(data.message || data.error);
 }
 </script>
 
