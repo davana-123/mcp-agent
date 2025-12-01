@@ -8,16 +8,22 @@ from auth import get_credentials
 
 
 # -------------------------------------------------------
-# ALWAYS recreate the YouTube client for WRITE operations
+# Create YouTube client using valid OAuth credentials
 # -------------------------------------------------------
 def _youtube():
-    creds = get_credentials()
-    return build(
-        "youtube",
-        "v3",
-        credentials=creds,
-        cache_discovery=False
-    )
+    """
+    Always rebuild the YouTube API client with fresh credentials.
+    """
+    try:
+        creds = get_credentials()
+        return build(
+            "youtube",
+            "v3",
+            credentials=creds,
+            cache_discovery=False
+        )
+    except Exception as e:
+        return None
 
 
 # -------------------------------------------------------
@@ -37,7 +43,7 @@ def extract_video_id(url: str) -> Optional[str]:
         if m:
             return m.group(1)
 
-    # Already a valid videoId? Allow it.
+    # Already a valid video ID?
     if len(url) == 11:
         return url
 
@@ -50,11 +56,20 @@ def extract_video_id(url: str) -> Optional[str]:
 def extract_channel_id_from_video(video_id: str) -> Optional[str]:
     try:
         yt = _youtube()
-        resp = yt.videos().list(part="snippet", id=video_id).execute()
+        if yt is None:
+            return None
+
+        resp = yt.videos().list(
+            part="snippet",
+            id=video_id
+        ).execute()
+
         items = resp.get("items", [])
         if not items:
             return None
+
         return items[0]["snippet"]["channelId"]
+
     except Exception:
         return None
 
@@ -65,6 +80,9 @@ def extract_channel_id_from_video(video_id: str) -> Optional[str]:
 def search_videos(query: str, max_results: int = 6) -> List[Dict[str, str]]:
     try:
         yt = _youtube()
+        if yt is None:
+            return [{"error": "OAuth not initialized. Visit /auth/login"}]
+
         resp = yt.search().list(
             part="snippet",
             q=query,
@@ -87,6 +105,7 @@ def search_videos(query: str, max_results: int = 6) -> List[Dict[str, str]]:
 
     except HttpError as e:
         return [{"error": f"YouTube API error: {e.error_details}"}]
+
     except Exception as e:
         return [{"error": f"Unexpected error: {str(e)}"}]
 
@@ -97,11 +116,15 @@ def search_videos(query: str, max_results: int = 6) -> List[Dict[str, str]]:
 def like_video(video_id: str) -> Dict[str, str]:
     try:
         yt = _youtube()
+        if yt is None:
+            return {"error": "Missing OAuth credentials. Re-login using /auth/login"}
+
         yt.videos().rate(id=video_id, rating="like").execute()
         return {"message": "👍 Video liked successfully"}
 
     except HttpError as e:
         return {"error": f"YouTube error: {e.error_details}"}
+
     except Exception as e:
         return {"error": str(e)}
 
@@ -115,6 +138,9 @@ def comment_on_video(video_id: str, text: str) -> Dict[str, str]:
 
     try:
         yt = _youtube()
+        if yt is None:
+            return {"error": "Missing OAuth credentials. Re-login using /auth/login"}
+
         yt.commentThreads().insert(
             part="snippet",
             body={
@@ -133,20 +159,24 @@ def comment_on_video(video_id: str, text: str) -> Dict[str, str]:
 
     except HttpError as e:
         return {"error": f"YouTube error: {e.error_details}"}
+
     except Exception as e:
         return {"error": str(e)}
 
 
 # -------------------------------------------------------
-# SUBSCRIBE to channel (videoId → channelId)
+# SUBSCRIBE to channel (auto extract from videoId)
 # -------------------------------------------------------
 def subscribe_channel(video_id: str) -> Dict[str, str]:
     try:
         channel_id = extract_channel_id_from_video(video_id)
         if not channel_id:
-            return {"error": "Could not find channel for video"}
+            return {"error": "Unable to find a channel for this video."}
 
         yt = _youtube()
+        if yt is None:
+            return {"error": "Missing OAuth credentials. Re-login using /auth/login"}
+
         yt.subscriptions().insert(
             part="snippet",
             body={
@@ -163,6 +193,7 @@ def subscribe_channel(video_id: str) -> Dict[str, str]:
 
     except HttpError as e:
         return {"error": f"YouTube error: {e.error_details}"}
+
     except Exception as e:
         return {"error": str(e)}
 
@@ -173,6 +204,9 @@ def subscribe_channel(video_id: str) -> Dict[str, str]:
 def get_liked_videos(max_results: int = 10) -> List[Dict[str, str]]:
     try:
         yt = _youtube()
+        if yt is None:
+            return [{"error": "Missing OAuth credentials. Re-login using /auth/login"}]
+
         resp = yt.videos().list(
             part="snippet",
             myRating="like",
@@ -191,12 +225,13 @@ def get_liked_videos(max_results: int = 10) -> List[Dict[str, str]]:
 
     except HttpError as e:
         return [{"error": f"YouTube error: {e.error_details}"}]
+
     except Exception as e:
         return [{"error": str(e)}]
 
 
 # -------------------------------------------------------
-# RECOMMEND videos
+# RECOMMEND videos based on liked videos
 # -------------------------------------------------------
 def get_recommended_videos(max_results=10) -> List[Dict[str, str]]:
     liked = get_liked_videos(10)
@@ -210,11 +245,12 @@ def get_recommended_videos(max_results=10) -> List[Dict[str, str]]:
         title = item.get("title", "")
         keywords = " ".join(title.split()[:4])
 
+        # Search based on keywords extracted from liked titles
         results = search_videos(keywords, 3)
         if isinstance(results, list):
             recommended.extend(results)
 
-    # Deduplicate
+    # Deduplicate results
     unique = {}
     for r in recommended:
         if r["videoId"] not in unique:

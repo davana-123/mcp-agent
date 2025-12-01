@@ -1,4 +1,5 @@
 # auth.py
+
 import os
 import json
 import pickle
@@ -17,31 +18,35 @@ if not CLIENT_SECRET_JSON:
 
 client_config = json.loads(CLIENT_SECRET_JSON)
 
-# ALWAYS use backend URL for redirect
+# Backend redirect URL
 REDIRECT_URI = "https://mcp-agent-1.onrender.com/auth/callback"
 
 
 # -------------------------------------------------------
-# Create OAuth flow with FULL YouTube scope
+# REQUIRED YOUTUBE SCOPES
+# These are necessary for LIKE, COMMENT, SUBSCRIBE
 # -------------------------------------------------------
+YOUTUBE_SCOPES = [
+    "https://www.googleapis.com/auth/youtube",
+    "https://www.googleapis.com/auth/youtube.force-ssl",
+    "https://www.googleapis.com/auth/youtube.readonly"
+]
+
+
 def create_flow():
+    """Create OAuth flow with correct YouTube scopes."""
     return Flow.from_client_config(
         client_config,
-        scopes=[
-            "https://www.googleapis.com/auth/youtube"   # FULL READ/WRITE SCOPE
-        ],
+        scopes=YOUTUBE_SCOPES,
         redirect_uri=REDIRECT_URI
     )
 
 
 # -------------------------------------------------------
-# Save & Load credentials (local only for DEV)
+# Save & Load credentials (local only)
 # -------------------------------------------------------
 def save_creds(creds):
-    """
-    Save OAuth credentials to token.pkl.
-    This is used only for local development—not on Render.
-    """
+    """Save OAuth credentials locally for development."""
     with open("token.pkl", "wb") as f:
         pickle.dump(creds, f)
 
@@ -58,68 +63,81 @@ def load_saved_creds():
 
 
 # -------------------------------------------------------
-# Main function to return valid Google OAuth credentials
+# Return valid Google OAuth credentials
 # -------------------------------------------------------
 def get_credentials():
     """
-    Production: Use refresh token from Render ENV.
-    Local: Use token.pkl.
+    PRODUCTION:
+        Use GOOGLE_REFRESH_TOKEN from Render ENV.
+    LOCAL:
+        Use token.pkl.
     """
-    refresh = os.getenv("GOOGLE_REFRESH_TOKEN")
+    refresh_token = os.getenv("GOOGLE_REFRESH_TOKEN")
 
-    if refresh:
+    if refresh_token:
         return Credentials(
             token=None,
-            refresh_token=refresh,
+            refresh_token=refresh_token,
             token_uri=client_config["web"]["token_uri"],
             client_id=client_config["web"]["client_id"],
-            client_secret=client_config["web"]["client_secret"]
+            client_secret=client_config["web"]["client_secret"],
+            scopes=YOUTUBE_SCOPES
         )
 
     saved = load_saved_creds()
     if saved:
         return saved
 
-    raise Exception("❌ No valid YouTube OAuth credentials. Visit /auth/login.")
+    raise Exception(
+        "❌ No valid YouTube OAuth credentials.\n"
+        "Visit https://mcp-agent-1.onrender.com/auth/login to authorize your account."
+    )
 
 
 # -------------------------------------------------------
-# OAuth: Login & Callback Routes
+# OAuth Login Route
 # -------------------------------------------------------
 def login():
-    """
-    Redirect user to Google OAuth screen.
-    """
+    """Redirect user to Google OAuth consent screen."""
     flow = create_flow()
     auth_url, _ = flow.authorization_url(
         prompt="consent",
-        access_type="offline",
+        access_type="offline",   # ensures refresh token
         include_granted_scopes="true"
     )
     return RedirectResponse(auth_url)
 
 
+# -------------------------------------------------------
+# OAuth Callback Route
+# -------------------------------------------------------
 async def oauth_callback(request: Request):
-    """
-    Called after user approves permissions.
-    """
+    """OAuth redirect handler."""
     code = request.query_params.get("code")
+    if not code:
+        return {"error": "Missing OAuth authorization code"}
 
     flow = create_flow()
     flow.fetch_token(code=code)
 
     creds = flow.credentials
 
-    # Only returned during first authorization
+    # Refresh token is ONLY returned the first time
     if creds.refresh_token:
         save_creds(creds)
-
         return {
-            "message": "OAuth successful!",
-            "next_step": "Copy the refresh token from Render logs → store in Render ENV as GOOGLE_REFRESH_TOKEN"
+            "message": "✅ OAuth Successful!",
+            "refresh_token": creds.refresh_token,
+            "instruction": (
+                "Add this refresh token to Render → Environment Variables → "
+                "GOOGLE_REFRESH_TOKEN"
+            )
         }
 
     return {
-        "message": "OAuth successful BUT refresh token missing.",
-        "reason": "Google did not provide a new refresh token. Remove stored token and re-auth with ?prompt=consent"
+        "message": "OAuth successful BUT no refresh token returned.",
+        "reason": (
+            "Google only returns refresh token on first authorization.\n"
+            "To force a new refresh token, append ?prompt=consent to /auth/login."
+        )
     }
