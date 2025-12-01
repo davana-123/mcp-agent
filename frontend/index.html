@@ -1,359 +1,390 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8" />
-<title>YouTube MCP Agent</title>
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+    <meta charset="UTF-8">
+    <title>YouTube MCP Agent</title>
 
-<style>
-/* ---------- GLOBAL STYLES ---------- */
-body {
-  margin: 0;
-  font-family: "Roboto", sans-serif;
-  background: #0f0f0f;
-  color: #fff;
-  display: flex;
-  overflow: hidden;
-  height: 100vh;
-}
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-.sidebar {
-  width: 240px;
-  background: #111;
-  border-right: 1px solid #222;
-  padding-top: 15px;
-  height: 100vh;
-  position: fixed;
-  left: 0;
-  top: 0;
-}
+    <style>
+        body {
+            margin: 0;
+            font-family: "Inter", sans-serif;
+            background: #0f0f0f;
+            color: #fff;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
 
-.sidebar-item {
-  padding: 14px 24px;
-  cursor: pointer;
-  font-size: 15px;
-  border-radius: 6px;
-}
+        /* ------------------ SIDEBAR ------------------ */
+        .sidebar {
+            width: 240px;
+            background: #111;
+            border-right: 1px solid #222;
+            padding-top: 12px;
+            overflow-y: auto;
+        }
 
-.sidebar-item:hover {
-  background: #222;
-}
+        .sidebar-item {
+            padding: 14px 22px;
+            font-size: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s;
+        }
 
-.navbar {
-  position: fixed;
-  left: 240px;
-  right: 0;
-  height: 70px;
-  background: #111;
-  border-bottom: 1px solid #222;
-  display: flex;
-  align-items: center;
-  padding: 0 25px;
-  z-index: 10;
-}
+        .sidebar-item:hover {
+            background: #1d1d1d;
+        }
 
-.search-box {
-  width: 45%;
-  display: flex;
-  gap: 10px;
-  margin-left: auto;
-  margin-right: auto;
-}
+        /* ------------------ NAVBAR ------------------ */
+        .navbar {
+            position: fixed;
+            left: 240px;
+            right: 0;
+            height: 70px;
+            background: #111;
+            border-bottom: 1px solid #222;
+            display: flex;
+            align-items: center;
+            padding: 0 25px;
+            gap: 20px;
+        }
 
-.search-box input {
-  width: 100%;
-  padding: 12px;
-  border-radius: 6px;
-  border: 1px solid #333;
-  background: #000;
-  color: white;
-}
+        .prompt-box {
+            width: 60%;
+            margin: auto;
+            display: flex;
+            gap: 10px;
+        }
 
-.search-box button {
-  padding: 12px 24px;
-  background: #2563EB;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  color: white;
-  font-weight: 500;
-}
+        .prompt-box input {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: #000;
+            color: #fff;
+            font-size: 15px;
+        }
 
-.command-bar {
-  position: fixed;
-  left: 240px;
-  right: 0;
-  top: 70px;
-  background: #111;
-  padding: 14px 25px;
-  border-bottom: 1px solid #222;
-  z-index: 9;
-}
+        .prompt-box button {
+            padding: 12px 18px;
+            background: #2563EB;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            transition: 0.2s;
+        }
 
-.command-bar input {
-  width: 300px;
-  padding: 10px;
-  border-radius: 6px;
-  background: #000;
-  border: 1px solid #333;
-  color: white;
-}
+        .prompt-box button:hover {
+            background: #1d4ed8;
+        }
 
-.command-bar button {
-  padding: 10px 20px;
-  background: #2563EB;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  color: white;
-  font-weight: 500;
-}
+        /* ------------------ MAIN CONTENT ------------------ */
+        .main {
+            margin-left: 240px;
+            padding: 20px;
+            margin-top: 90px;
+            height: calc(100vh - 90px);
+            overflow-y: auto;
+        }
 
-.main {
-  margin-left: 240px;
-  margin-top: 140px;
-  padding: 25px;
-  height: calc(100vh - 140px);
-  overflow-y: auto;
-}
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 30px;
+        }
 
-.video-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 25px;
-}
+        .video-card {
+            background: #181818;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: 0.25s ease;
+            border: 1px solid #222;
+        }
 
-.video-card {
-  background: #181818;
-  border-radius: 12px;
-  border: 1px solid #333;
-  overflow: hidden;
-  transition: .25s;
-}
+        .video-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+            cursor: pointer;
+        }
 
-.video-card:hover {
-  transform: scale(1.02);
-}
+        .thumb {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
 
-.thumb {
-  width: 100%;
-  height: 200px;
-  object-fit: cover;
-}
+        .video-info {
+            padding: 14px;
+        }
 
-.video-info {
-  padding: 15px;
-}
+        .video-info h3 {
+            margin: 0;
+            font-size: 17px;
+            font-weight: 500;
+        }
 
-.video-info h3 {
-  margin: 0 0 5px 0;
-  font-size: 17px;
-}
+        .video-info small {
+            color: #aaa;
+        }
 
-.video-info small {
-  color: #aaa;
-}
+        .button-row {
+            padding: 14px;
+            display: flex;
+            gap: 10px;
+        }
 
-.button-row {
-  padding: 15px;
-  display: flex;
-  gap: 8px;
-}
+        .button-row button {
+            flex: 1;
+            padding: 10px 0;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: #222;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+        }
 
-.button-row button {
-  flex: 1;
-  padding: 10px;
-  background: #222;
-  border: 1px solid #444;
-  border-radius: 8px;
-  color: white;
-  cursor: pointer;
-}
+        .button-row button:hover {
+            background: #333;
+        }
 
-.button-row button:hover {
-  background: #333;
-}
+        /* ------------------ TOAST ------------------ */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(34, 34, 34, 0.9);
+            padding: 14px 22px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: 0.35s ease;
+            z-index: 9999;
+            pointer-events: none;
+        }
 
-.toast {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background: #222;
-  color: #fff;
-  padding: 12px 20px;
-  border-radius: 6px;
-  border: 1px solid #444;
-  font-size: 14px;
-  opacity: 0;
-  transition: opacity 0.4s;
-  z-index: 1000;
-}
-
-.toast.show {
-  opacity: 1;
-}
-</style>
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
 </head>
 
 <body>
 
-<!-- ---------- SIDEBAR ---------- -->
-<div class="sidebar">
-  <div class="sidebar-item" onclick="loadHome()">🏠 Home</div>
-  <div class="sidebar-item" onclick="loadTrending()">🔥 Trending</div>
-  <div class="sidebar-item" onclick="loadSubscriptions()">📺 Subscriptions</div>
-  <hr style="border-color:#222" />
-  <div class="sidebar-item" onclick="loadHistory()">History</div>
-  <div class="sidebar-item" onclick="loadWatchLater()">Watch Later</div>
-  <div class="sidebar-item" onclick="loadLiked()">Liked</div>
-</div>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-item" onclick="loadHome()">🏠 Home</div>
+        <div class="sidebar-item" onclick="loadTrending()">🔥 Trending</div>
+        <div class="sidebar-item" onclick="loadSubscriptions()">📺 Subscriptions</div>
 
-<!-- ---------- NAVBAR ---------- -->
-<div class="navbar">
-  <div class="search-box">
-    <input id="input" placeholder="Search videos..." />
-    <button onclick="send()">Search</button>
-  </div>
-</div>
+        <div style="border-bottom:1px solid #222; margin:12px 0;"></div>
 
-<!-- ---------- COMMAND BAR ---------- -->
-<div class="command-bar">
-  <input id="commandInput" placeholder='Type: "like this video", "unlike", "dislike"' />
-  <button onclick="runCommand()">Run</button>
-</div>
+        <div class="sidebar-item" onclick="loadHistory()">🕓 History</div>
+        <div class="sidebar-item" onclick="loadWatchLater()">⏱ Watch Later</div>
+        <div class="sidebar-item" onclick="loadLiked()">👍 Liked Videos</div>
+    </div>
 
-<!-- ---------- MAIN CONTENT ---------- -->
-<div class="main">
-  <div id="messages"></div>
-</div>
+    <!-- Top Navbar -->
+    <div class="navbar">
+        <div class="prompt-box">
+            <input id="input" placeholder="Ask your AI agent… e.g. 'like despacito video', 'search fitness workouts'">
+            <button onclick="handlePrompt()">Go</button>
+        </div>
+    </div>
 
-<div id="toast" class="toast"></div>
+    <!-- Main -->
+    <div class="main">
+        <div id="messages"></div>
+    </div>
 
-<script>
-const API = "https://mcp-agent-1.onrender.com/api";
+    <!-- Toast -->
+    <div id="toast" class="toast"></div>
 
-/* ---------- Toast ---------- */
-function showToast(msg) {
-  const t = document.getElementById("toast");
-  t.innerText = msg;
-  t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 2500);
-}
+    <script>
+        const API = "https://mcp-agent-1.onrender.com/api";
 
-/* ---------- Search ---------- */
-document.getElementById("input").addEventListener("keypress", e => {
-  if (e.key === "Enter") send();
-});
+        /* ------------------- TOAST ------------------- */
+        function showToast(msg) {
+            let t = document.getElementById("toast");
+            t.innerHTML = msg;
+            t.classList.add("show");
+            setTimeout(() => t.classList.remove("show"), 2600);
+        }
 
-async function send() {
-  const query = input.value.trim();
-  if (!query) return;
-  input.value = "";
-  const res = await fetch(`${API}/search?query=${encodeURIComponent(query)}`);
-  showVideos(await res.json());
-}
+        /* ------------------- MESSAGE HELPERS ------------------- */
+        function addMessage(t) {
+            const m = document.getElementById("messages");
+            const p = document.createElement("p");
+            p.style.color = "#ccc";
+            p.innerHTML = t;
+            m.appendChild(p);
+        }
 
-/* ---------- Render Videos ---------- */
-function showVideos(list) {
-  messages.innerHTML = "";
+        function clearMessages() {
+            document.getElementById("messages").innerHTML = "";
+        }
 
-  const grid = document.createElement("div");
-  grid.className = "video-grid";
+        /* ------------------- PROMPT HANDLING ------------------- */
+        async function handlePrompt() {
+            const text = document.getElementById("input").value.trim();
+            if (!text) return;
 
-  list.forEach(v => {
-    const card = document.createElement("div");
-    card.className = "video-card";
+            document.getElementById("input").value = "";
 
-    card.innerHTML = `
-      <img class="thumb" src="https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg">
-      <div class="video-info">
-        <h3>${v.title}</h3>
-        <small>${v.channelTitle}</small>
-      </div>
-      <div class="button-row">
-        <button class="like-btn" onclick="likeVideo('${v.videoId}')">👍 Like</button>
-        <button onclick="commentVideo('${v.videoId}')">💬 Comment</button>
-        <button onclick="subscribeChannel('${v.videoId}')">🔔 Subscribe</button>
-      </div>
-    `;
+            const lower = text.toLowerCase();
 
-    grid.appendChild(card);
-  });
+            if (lower.startsWith("search")) {
+                const q = text.replace(/^search/i, "").trim();
+                return sendSearch(q);
+            }
 
-  messages.appendChild(grid);
-}
+            if (lower.startsWith("like")) {
+                const q = text.replace(/^like/i, "").trim();
+                return searchAndAct(q, "like");
+            }
 
-/* ---------- Actions ---------- */
-async function likeVideo(videoId) {
-  const res = await fetch(`${API}/like`, {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({videoId})
-  });
-  const data = await res.json();
-  showToast(data.message || data.error);
-}
+            if (lower.startsWith("subscribe")) {
+                const q = text.replace(/^subscribe/i, "").trim();
+                return searchAndAct(q, "subscribe");
+            }
 
-async function commentVideo(videoId) {
-  const text = prompt("Enter your comment:");
-  if (!text) return;
+            if (lower.startsWith("comment")) {
+                const q = text.replace(/^comment/i, "").trim();
+                return searchAndAct(q, "comment");
+            }
 
-  const res = await fetch(`${API}/comment`, {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({videoId, text})
-  });
+            addMessage("❌ Unrecognized command.");
+        }
 
-  showToast((await res.json()).message);
-}
+        /* Search + automatically act on first matching video */
+        async function searchAndAct(q, type) {
+            addMessage(`Searching for video: ${q}`);
 
-async function subscribeChannel(videoId) {
-  const res = await fetch(`${API}/subscribe`, {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({videoId})
-  });
+            const res = await fetch(`${API}/search?query=${encodeURIComponent(q)}`);
+            const data = await res.json();
+            if (!data.length) return showToast("No video found.");
 
-  showToast((await res.json()).message);
-}
+            const video = data[0]; // first result
 
-/* ---------- Sidebar ---------- */
-function loadHome() { messages.innerHTML = "Search for something above."; }
-function loadTrending() { showToast("Feature not implemented"); }
-function loadSubscriptions() { showToast("Feature not implemented"); }
-function loadHistory() { showToast("History API not available"); }
-function loadWatchLater() { showToast("Watch Later API not available"); }
+            if (type === "like") return likeVideo(video.videoId);
+            if (type === "subscribe") return subscribeChannel(video.videoId);
+            if (type === "comment") {
+                let txt = prompt("Enter comment:");
+                return commentVideo(video.videoId, txt);
+            }
+        }
 
-function loadLiked() {
-  fetch(`${API}/liked`)
-    .then(res => res.json())
-    .then(data => showVideos(data));
-}
+        /* ------------------- SEARCH ------------------- */
+        async function sendSearch(query) {
+            if (!query) return;
+            addMessage("🔎 Searching for: " + query);
+            const res = await fetch(`${API}/search?query=${encodeURIComponent(query)}`);
+            const data = await res.json();
+            showVideos(data);
+        }
 
-/* ---------- Command System ---------- */
-function runCommand() {
-  const cmd = document.getElementById("commandInput").value.toLowerCase();
-  const likeBtn = document.querySelector(".like-btn");
+        document.getElementById("input").addEventListener("keypress", e => {
+            if (e.key === "Enter") handlePrompt();
+        });
 
-  if (cmd.includes("like")) {
-    if (likeBtn) likeBtn.click();
-    showToast("Liked via command");
-    return;
-  }
+        /* ------------------- VIDEO RENDERING ------------------- */
+        function showVideos(list) {
+            clearMessages();
 
-  if (cmd.includes("unlike")) {
-    showToast("Unlike (UI only)");
-    return;
-  }
+            const grid = document.createElement("div");
+            grid.className = "video-grid";
 
-  if (cmd.includes("dislike")) {
-    showToast("Dislike (UI only)");
-    return;
-  }
+            list.forEach(v => {
+                const c = document.createElement("div");
+                c.className = "video-card";
 
-  showToast("Unknown command");
-}
-</script>
+                c.onclick = () => window.open(`https://www.youtube.com/watch?v=${v.videoId}`, "_blank");
+
+                c.innerHTML = `
+                    <img class="thumb" src="https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg">
+
+                    <div class="video-info">
+                        <h3>${v.title}</h3>
+                        <small>${v.channelTitle}</small>
+                    </div>
+
+                    <div class="button-row">
+                        <button onclick="event.stopPropagation(); likeVideo('${v.videoId}')">👍 Like</button>
+                        <button onclick="event.stopPropagation(); promptComment('${v.videoId}')">💬 Comment</button>
+                        <button onclick="event.stopPropagation(); subscribeChannel('${v.videoId}')">🔔 Subscribe</button>
+                    </div>
+                `;
+
+                grid.appendChild(c);
+            });
+
+            document.getElementById("messages").appendChild(grid);
+        }
+
+        /* ------------------- ACTIONS ------------------- */
+        async function likeVideo(videoId) {
+            const res = await fetch(`${API}/like`, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ videoId })
+            });
+            const data = await res.json();
+            showToast(data.message || data.error);
+        }
+
+        function promptComment(id) {
+            const t = prompt("Enter your comment:");
+            if (t) commentVideo(id, t);
+        }
+
+        async function commentVideo(videoId, text) {
+            const res = await fetch(`${API}/comment`, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ videoId, text })
+            });
+            const d = await res.json();
+            showToast(d.message || d.error);
+        }
+
+        async function subscribeChannel(videoId) {
+            const res = await fetch(`${API}/subscribe`, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ videoId })
+            });
+            const d = await res.json();
+            showToast(d.message || d.error);
+        }
+
+        /* ------------------- SIDEBAR ------------------- */
+        function loadHome() {
+            clearMessages();
+            addMessage("Enter a search query or give a prompt.");
+        }
+
+        function loadTrending() { showToast("Trending not implemented."); }
+        function loadSubscriptions() { showToast("Subscriptions not implemented."); }
+        function loadHistory() { showToast("History not accessible via API."); }
+        function loadWatchLater() { showToast("Watch Later not accessible."); }
+
+        function loadLiked() {
+            fetch(`${API}/liked`)
+                .then(r => r.json())
+                .then(d => showVideos(d));
+        }
+    </script>
 
 </body>
 </html>
