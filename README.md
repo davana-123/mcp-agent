@@ -529,14 +529,6 @@ This project is for educational purposes as part of the MCP agent assignment.
 
 ---
 
-## 👤 Author
-
-**Your Name**
-- GitHub: [@your-username](https://github.com/your-username)
-- Project Link: [https://your-vercel-app.vercel.app](https://your-vercel-app.vercel.app)
-
----
-
 ## 🙏 Acknowledgments
 
 - **Model Context Protocol (MCP)** - For the agent framework
