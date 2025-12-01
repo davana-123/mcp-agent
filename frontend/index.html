@@ -4,191 +4,177 @@
 <meta charset="UTF-8">
 <title>YouTube MCP Agent</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
-/* Global styling */
+/* ---------------------------------------------------
+   GLOBAL THEME
+--------------------------------------------------- */
 body {
   margin: 0;
-  font-family: "Roboto", sans-serif;
-  background: #000;
-  color: #fff;
+  font-family: "Inter", sans-serif;
+  background: #f6f6f6;
+  color: #222;
+}
+
+/* Smooth Containers */
+.section {
+  width: 90%;
+  max-width: 1150px;
+  margin: 40px auto;
+  background: white;
+  padding: 60px;
+  border-radius: 26px;
+  box-shadow: 0 5px 30px rgba(0,0,0,0.06);
+}
+
+/* ---------------------------------------------------
+   HERO SECTION
+--------------------------------------------------- */
+.hero {
+  text-align: center;
+  padding: 40px 0 20px 0;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: 38px;
+  font-weight: 700;
+}
+
+.hero span {
+  color: #2563EB;
+}
+
+.hero .search-box {
   display: flex;
-  height: 100vh;
-  overflow: hidden;
-}
-
-.sidebar {
-  width: 240px;
-  background: #111;
-  border-right: 1px solid #222;
-  overflow-y: auto;
-  padding-top: 12px;
-}
-
-.sidebar-item {
-  padding: 12px 22px;
-  font-size: 15px;
-  cursor: pointer;
-}
-
-.sidebar-item:hover {
-  background: #1f1f1f;
-}
-
-.navbar {
-  position: fixed;
-  left: 240px;
-  right: 0;
-  height: 65px;
-  background: #111;
-  border-bottom: 1px solid #222;
-  display: flex;
-  align-items: center;
-  padding: 0 20px;
-}
-
-.search-box {
-  width: 50%;
-  margin: auto;
-  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 30px;
 }
 
 .search-box input {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #333;
-  background: #000;
-  color: white;
+  width: 380px;
+  padding: 12px 16px;
+  border: 1px solid #ccc;
+  border-radius: 14px;
+  font-size: 15px;
 }
 
 .search-box button {
-  padding: 10px 16px;
-  background: #2563EB;
+  padding: 12px 24px;
   border: none;
+  background: #2563EB;
   color: white;
+  border-radius: 14px;
   cursor: pointer;
+  font-size: 15px;
 }
 
-.main {
-  margin-left: 240px;
-  padding: 20px;
-  margin-top: 85px;
-  height: calc(100vh - 85px);
-  overflow-y: auto;
-}
-
+/* ---------------------------------------------------
+   VIDEO GRID
+--------------------------------------------------- */
 .video-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 25px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  margin-top: 30px;
 }
 
 .video-card {
-  background: #181818;
-  border: 1px solid #333;
-  border-radius: 10px;
+  background: #fafafa;
+  border-radius: 18px;
+  box-shadow: 0 3px 15px rgba(0,0,0,0.08);
   overflow: hidden;
-  transition: 0.2s;
+  transition: 0.25s;
 }
 
 .video-card:hover {
   transform: scale(1.03);
-  cursor: pointer;
 }
 
 .thumb {
   width: 100%;
-  height: 200px;
+  height: 160px;
   object-fit: cover;
 }
 
 .video-info {
-  padding: 12px;
+  padding: 15px;
 }
 
 .video-info h3 {
-  margin: 0;
-  font-size: 16px;
+  margin: 0 0 4px 0;
+  font-size: 15px;
 }
 
 .video-info small {
-  color: #aaa;
+  color: #777;
 }
 
+/* Action Buttons */
 .button-row {
   padding: 12px;
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .button-row button {
   flex: 1;
   padding: 8px;
-  background: #222;
-  border: 1px solid #333;
-  color: white;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  background: #fff;
   cursor: pointer;
 }
 
 .button-row button:hover {
-  background: #333;
+  background: #f0f0f0;
 }
 
-/* ----------------------- */
-/* Toast Notification */
-/* ----------------------- */
+/* ---------------------------------------------------
+   TOAST NOTIFICATION
+--------------------------------------------------- */
 .toast {
   position: fixed;
-  top: 20px;
-  right: 20px;
-  background: #222;
+  top: 25px;
+  right: 25px;
+  background: #333;
   color: #fff;
   padding: 12px 20px;
-  border-radius: 6px;
-  border: 1px solid #444;
-  font-size: 14px;
+  border-radius: 12px;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.4s ease;
+  transition: opacity 0.4s;
   z-index: 9999;
 }
-
 .toast.show {
   opacity: 1;
-  pointer-events: auto;
 }
 </style>
-
 </head>
+
 <body>
 
-<!-- Sidebar -->
-<div class="sidebar">
-  <div class="sidebar-item" onclick="loadHome()">🏠 Home</div>
-  <div class="sidebar-item" onclick="loadTrending()">🔥 Trending</div>
-  <div class="sidebar-item" onclick="loadSubscriptions()">📺 Subscriptions</div>
-  <div style="border-bottom:1px solid #222; margin:12px 0;"></div>
-  <div class="sidebar-item" onclick="loadHistory()">History</div>
-  <div class="sidebar-item" onclick="loadWatchLater()">Watch Later</div>
-  <div class="sidebar-item" onclick="loadLiked()">Liked Videos</div>
-</div>
+<!-- HERO (Top Section) -->
+<div class="hero">
+  <h1>Search YouTube using your <span>MCP Agent</span></h1>
+  <p style="color:#666; margin-top:8px;">Fast. Simple. Clean interface.</p>
 
-<!-- Top Navbar -->
-<div class="navbar">
   <div class="search-box">
     <input id="input" placeholder="Search videos...">
     <button onclick="send()">Search</button>
   </div>
 </div>
 
-<!-- Main -->
-<div class="main">
+<!-- RESULTS SECTION -->
+<div class="section">
+  <h2 style="margin-top:0;font-size:24px;font-weight:600;">Results</h2>
   <div id="messages"></div>
 </div>
 
-<!-- Toast Container -->
-<div id="toast"></div>
+<!-- Toast -->
+<div id="toast" class="toast"></div>
 
 <script>
 // --------------------------
@@ -197,38 +183,34 @@ body {
 const API = "https://mcp-agent-1.onrender.com/api";
 
 // --------------------------
-// Toast Notification System
+// TOAST
 // --------------------------
-function showToast(message) {
-  let toast = document.getElementById("toast");
-  toast.innerHTML = message;
-  toast.classList.add("show");
-
-  setTimeout(() => {
-    toast.classList.remove("show");
-  }, 2500);
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.innerHTML = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2600);
 }
 
 // --------------------------
-// Helpers
+// Helper functions
 // --------------------------
-function addMessage(text) {
-  const messages = document.getElementById("messages");
-  const p = document.createElement("p");
-  p.innerHTML = text;
-  p.style.color = "#aaa";
-  messages.appendChild(p);
-}
-
 function clearMessages() {
   document.getElementById("messages").innerHTML = "";
 }
 
-// --------------------------
-// Enable Enter Key Search
-// --------------------------
-document.getElementById('input').addEventListener('keypress', function (e) {
-  if (e.key === 'Enter') send();
+function addMessage(text) {
+  const div = document.getElementById("messages");
+  const p = document.createElement("p");
+  p.style.color = "#777";
+  p.style.fontSize = "14px";
+  p.innerHTML = text;
+  div.appendChild(p);
+}
+
+// Enter key
+document.getElementById("input").addEventListener("keypress", e => {
+  if (e.key === "Enter") send();
 });
 
 // --------------------------
@@ -238,17 +220,20 @@ async function send() {
   const input = document.getElementById("input");
   const query = input.value.trim();
   if (!query) return;
-  input.value = "";
 
-  addMessage("🔎 Searching for: " + query);
+  clearMessages();
+  addMessage("Searching for: <b>" + query + "</b>");
+
+  input.value = "";
 
   const res = await fetch(`${API}/search?query=${encodeURIComponent(query)}`);
   const data = await res.json();
+
   showVideos(data);
 }
 
 // --------------------------
-// Render videos
+// Render YouTube results
 // --------------------------
 function showVideos(list) {
   clearMessages();
@@ -270,7 +255,6 @@ function showVideos(list) {
         <h3>${v.title}</h3>
         <small>${v.channelTitle}</small>
       </div>
-
       <div class="button-row">
         <button onclick="event.stopPropagation(); likeVideo('${v.videoId}')">👍 Like</button>
         <button onclick="event.stopPropagation(); commentVideo('${v.videoId}')">💬 Comment</button>
@@ -285,7 +269,7 @@ function showVideos(list) {
 }
 
 // --------------------------
-// ACTIONS (with toast)
+// ACTIONS
 // --------------------------
 async function likeVideo(videoId) {
   const res = await fetch(`${API}/like`, {
@@ -293,6 +277,7 @@ async function likeVideo(videoId) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ videoId })
   });
+
   const data = await res.json();
   showToast(data.message || data.error);
 }
@@ -306,6 +291,7 @@ async function commentVideo(videoId) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ videoId, text })
   });
+
   const data = await res.json();
   showToast(data.message || data.error);
 }
@@ -316,23 +302,9 @@ async function subscribeChannel(videoId) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ videoId })
   });
+
   const data = await res.json();
   showToast(data.message || data.error);
-}
-
-// --------------------------
-// SIDEBAR BUTTONS
-// --------------------------
-function loadHome() { clearMessages(); addMessage("Enter search query above."); }
-function loadTrending() { showToast("Trending not implemented."); }
-function loadSubscriptions() { showToast("Subscriptions not implemented."); }
-function loadHistory() { showToast("History cannot be accessed via API."); }
-function loadWatchLater() { showToast("Watch Later cannot be accessed via API."); }
-
-function loadLiked() {
-  fetch(`${API}/liked`)
-    .then(res => res.json())
-    .then(data => showVideos(data));
 }
 </script>
 
