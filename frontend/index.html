@@ -134,6 +134,30 @@ body {
 .button-row button:hover {
   background: #333;
 }
+
+/* ----------------------- */
+/* Toast Notification */
+/* ----------------------- */
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #222;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  font-size: 14px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+  z-index: 9999;
+}
+
+.toast.show {
+  opacity: 1;
+  pointer-events: auto;
+}
 </style>
 
 </head>
@@ -163,11 +187,27 @@ body {
   <div id="messages"></div>
 </div>
 
+<!-- Toast Container -->
+<div id="toast"></div>
+
 <script>
 // --------------------------
 // CONFIG
 // --------------------------
 const API = "https://mcp-agent-1.onrender.com/api";
+
+// --------------------------
+// Toast Notification System
+// --------------------------
+function showToast(message) {
+  let toast = document.getElementById("toast");
+  toast.innerHTML = message;
+  toast.classList.add("show");
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+  }, 2500);
+}
 
 // --------------------------
 // Helpers
@@ -185,14 +225,14 @@ function clearMessages() {
 }
 
 // --------------------------
-// SEARCH ENTER KEY
+// Enable Enter Key Search
 // --------------------------
 document.getElementById('input').addEventListener('keypress', function (e) {
   if (e.key === 'Enter') send();
 });
 
 // --------------------------
-// SEARCH / COMMAND HANDLER
+// SEARCH
 // --------------------------
 async function send() {
   const input = document.getElementById("input");
@@ -245,7 +285,7 @@ function showVideos(list) {
 }
 
 // --------------------------
-// ACTIONS
+// ACTIONS (with toast)
 // --------------------------
 async function likeVideo(videoId) {
   const res = await fetch(`${API}/like`, {
@@ -254,7 +294,7 @@ async function likeVideo(videoId) {
     body: JSON.stringify({ videoId })
   });
   const data = await res.json();
-  addMessage(data.message || data.error);
+  showToast(data.message || data.error);
 }
 
 async function commentVideo(videoId) {
@@ -267,7 +307,7 @@ async function commentVideo(videoId) {
     body: JSON.stringify({ videoId, text })
   });
   const data = await res.json();
-  addMessage(data.message || data.error);
+  showToast(data.message || data.error);
 }
 
 async function subscribeChannel(videoId) {
@@ -277,17 +317,18 @@ async function subscribeChannel(videoId) {
     body: JSON.stringify({ videoId })
   });
   const data = await res.json();
-  addMessage(data.message || data.error);
+  showToast(data.message || data.error);
 }
 
 // --------------------------
-// SIDEBAR BUTTON HANDLERS
+// SIDEBAR BUTTONS
 // --------------------------
-function loadHome() { send(); }
-function loadTrending() { addMessage("🔥 Trending not implemented yet."); }
-function loadSubscriptions() { addMessage("📺 Subscriptions not implemented yet."); }
-function loadHistory() { addMessage("📜 History is not available via YouTube API."); }
-function loadWatchLater() { addMessage("⌛ Watch Later cannot be accessed via API."); }
+function loadHome() { clearMessages(); addMessage("Enter search query above."); }
+function loadTrending() { showToast("Trending not implemented."); }
+function loadSubscriptions() { showToast("Subscriptions not implemented."); }
+function loadHistory() { showToast("History cannot be accessed via API."); }
+function loadWatchLater() { showToast("Watch Later cannot be accessed via API."); }
+
 function loadLiked() {
   fetch(`${API}/liked`)
     .then(res => res.json())
