@@ -73,8 +73,8 @@ body {
 .main {
   margin-left: 240px;
   padding: 20px;
-  margin-top: 85px;
-  height: calc(100vh - 85px);
+  margin-top: 140px;
+  height: calc(100vh - 140px);
   overflow-y: auto;
 }
 
@@ -135,9 +135,7 @@ body {
   background: #333;
 }
 
-/* ----------------------- */
 /* Toast Notification */
-/* ----------------------- */
 .toast {
   position: fixed;
   top: 20px;
@@ -182,6 +180,17 @@ body {
   </div>
 </div>
 
+<!-- Command Bar -->
+<div style="margin-left:240px; padding:15px; background:#111; border-bottom:1px solid #222;">
+  <input id="commandInput"
+         placeholder='Type: "like this video", "unlike", "dislike"'
+         style="width:300px; padding:8px; background:#000; color:white; border:1px solid #333;">
+  <button onclick="runCommand()" 
+          style="padding:8px 15px; background:#2563EB; color:white; border:none; cursor:pointer;">
+    Run
+  </button>
+</div>
+
 <!-- Main -->
 <div class="main">
   <div id="messages"></div>
@@ -191,27 +200,16 @@ body {
 <div id="toast"></div>
 
 <script>
-// --------------------------
-// CONFIG
-// --------------------------
 const API = "https://mcp-agent-1.onrender.com/api";
 
-// --------------------------
-// Toast Notification System
-// --------------------------
+// Toast System
 function showToast(message) {
   let toast = document.getElementById("toast");
   toast.innerHTML = message;
   toast.classList.add("show");
-
-  setTimeout(() => {
-    toast.classList.remove("show");
-  }, 2500);
+  setTimeout(() => toast.classList.remove("show"), 2500);
 }
 
-// --------------------------
-// Helpers
-// --------------------------
 function addMessage(text) {
   const messages = document.getElementById("messages");
   const p = document.createElement("p");
@@ -224,16 +222,11 @@ function clearMessages() {
   document.getElementById("messages").innerHTML = "";
 }
 
-// --------------------------
-// Enable Enter Key Search
-// --------------------------
 document.getElementById('input').addEventListener('keypress', function (e) {
   if (e.key === 'Enter') send();
 });
 
-// --------------------------
-// SEARCH
-// --------------------------
+// Search
 async function send() {
   const input = document.getElementById("input");
   const query = input.value.trim();
@@ -247,9 +240,7 @@ async function send() {
   showVideos(data);
 }
 
-// --------------------------
-// Render videos
-// --------------------------
+// Render Videos
 function showVideos(list) {
   clearMessages();
 
@@ -272,7 +263,7 @@ function showVideos(list) {
       </div>
 
       <div class="button-row">
-        <button onclick="event.stopPropagation(); likeVideo('${v.videoId}')">👍 Like</button>
+        <button class="like-btn" onclick="event.stopPropagation(); likeVideo('${v.videoId}')">👍 Like</button>
         <button onclick="event.stopPropagation(); commentVideo('${v.videoId}')">💬 Comment</button>
         <button onclick="event.stopPropagation(); subscribeChannel('${v.videoId}')">🔔 Subscribe</button>
       </div>
@@ -284,9 +275,7 @@ function showVideos(list) {
   document.getElementById("messages").appendChild(grid);
 }
 
-// --------------------------
-// ACTIONS (with toast)
-// --------------------------
+// Actions
 async function likeVideo(videoId) {
   const res = await fetch(`${API}/like`, {
     method: "POST",
@@ -320,9 +309,7 @@ async function subscribeChannel(videoId) {
   showToast(data.message || data.error);
 }
 
-// --------------------------
-// SIDEBAR BUTTONS
-// --------------------------
+// Sidebar
 function loadHome() { clearMessages(); addMessage("Enter search query above."); }
 function loadTrending() { showToast("Trending not implemented."); }
 function loadSubscriptions() { showToast("Subscriptions not implemented."); }
@@ -333,6 +320,33 @@ function loadLiked() {
   fetch(`${API}/liked`)
     .then(res => res.json())
     .then(data => showVideos(data));
+}
+
+// ------------------------------
+// COMMAND SYSTEM
+// ------------------------------
+function runCommand() {
+  const cmd = document.getElementById("commandInput").value.toLowerCase().trim();
+
+  const likeBtn = document.querySelector(".like-btn");
+
+  if (cmd.includes("like")) {
+    if (likeBtn) likeBtn.click();
+    showToast("Liked via command");
+    return;
+  }
+
+  if (cmd.includes("unlike") || cmd.includes("remove")) {
+    showToast("Unlike (UI only, backend not implemented)");
+    return;
+  }
+
+  if (cmd.includes("dislike")) {
+    showToast("Dislike (UI only, backend not implemented)");
+    return;
+  }
+
+  showToast("Unknown command");
 }
 </script>
 
